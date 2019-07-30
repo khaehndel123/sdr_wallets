@@ -1,0 +1,4 @@
+ALTER TABLE transfers
+  DROP COLUMN IF EXISTS amount,
+  DROP COLUMN IF EXISTS to_address,
+  DROP COLUMN IF EXISTS tax_amount;

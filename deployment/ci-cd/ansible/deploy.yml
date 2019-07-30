@@ -1,0 +1,14 @@
+---
+- name: deploy sdr-wallet backend
+  gather_facts: false
+  hosts: all
+  tasks:
+          - name: copy bin file
+            copy:
+                    src: ../../../sdrwallet
+                    dest: /root/code/backend/build/sdrwallet
+
+          - name: restart service sdrwallet
+            systemd:
+                    name: sdrwallet
+                    state: restarted

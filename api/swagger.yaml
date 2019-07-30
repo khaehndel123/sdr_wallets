@@ -1,0 +1,523 @@
+swagger: '2.0'
+info:
+  title: sdr-backend
+  version: v1
+consumes:
+  - application/json
+produces:
+  - application/json
+
+paths:
+  /api/v1/wallet:
+    post:
+      summary: Create a wallet
+      tags:
+        - Public
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/NewWallet'
+        - name: x-signature
+          in: header
+          required: true
+          type: string
+          description: An HMAC SHA256 hash for the "address" field in body
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/AuthorizedWallet'
+        '400':
+          description: A failed response
+          schema:
+            $ref: '#/definitions/Error'
+
+  /api/v1/wallet/{address}:
+    get:
+      summary: Get a wallet by address
+      tags:
+        - Public
+      parameters:
+        - name: address
+          in: path
+          required: true
+          type: string
+        - name: x-signature
+          in: header
+          required: true
+          type: string
+          description: An HMAC SHA256 hash for the "address" parameter in path
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/AuthorizedWallet'
+        '400':
+          description: A failed response
+          schema:
+            $ref: '#/definitions/Error'
+
+  /api/v1/subscribe:
+    get:
+      summary: Subscribe to notifications delivered through Web Sockets. It is client's responsability to reconnect on connection close
+      tags:
+        - Private
+      parameters:
+        - name: jwt
+          in: query
+          required: true
+          type: string
+          description: An access token
+      responses:
+        '200':
+          description: A successful response. Events will have the following structure
+          schema:
+            $ref: '#/definitions/TransactionCompleted'
+        '400':
+          description: A failed response
+          schema:
+            $ref: '#/definitions/Error'
+
+  /api/v1/estimatetax:
+    post:
+      summary: Estimate a tax for a tranfer
+      tags:
+        - Private
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/NewTransfer'
+        - name: Authorization
+          in: header
+          required: true
+          type: string
+          description: Bearer YOUR_JWT_HERE
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/TaxEstimation'
+        '400':
+          description: A failed response
+          schema:
+            $ref: '#/definitions/Error'
+
+  /api/v1/transfer:
+    post:
+      summary: Create a new transfer
+      tags:
+        - Private
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/NewTransfer'
+        - name: Authorization
+          in: header
+          required: true
+          type: string
+          description: Bearer YOUR_JWT_HERE
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/UnsignedTransfer'
+        '400':
+          description: A failed response
+          schema:
+            $ref: '#/definitions/Error'
+
+  /api/v1/transfer/confirm:
+    post:
+      summary: Confirm a transfer with signed transactions
+      tags:
+        - Private
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/SignedTransfer'
+        - name: Authorization
+          in: header
+          required: true
+          type: string
+          description: Bearer YOUR_JWT_HERE
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/QueuedTransfer'
+        '400':
+          description: A failed response
+          schema:
+            $ref: '#/definitions/Error'
+
+  /api/v1/transactions:
+    get:
+      summary: Fetch transaction history
+      tags:
+        - Private
+      parameters:
+        - name: after
+          in: query
+          type: integer
+          format: int64
+          description: A timestamp to fetch transactions later than specified
+        - name: skip
+          in: query
+          type: integer
+          format: int64
+          description: Skip first "n" transactions
+        - name: limit
+          in: query
+          type: integer
+          format: int64
+          description: Limit transactions count by "n"
+        - name: Authorization
+          in: header
+          required: true
+          type: string
+          description: Bearer YOUR_JWT_HERE
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/TransactionHistory'
+        '400':
+          description: A failed response
+          schema:
+            $ref: '#/definitions/Error'
+
+  /api/v1/transactions/{hash}:
+    get:
+      summary: Fetch a transaction by its hash (or id in case of a queued transfer)
+      tags:
+        - Private
+      parameters:
+        - name: hash
+          in: path
+          type: integer
+          format: int64
+          required: true
+          description: A transaction hash (or id in case of a queued transfer)
+        - name: Authorization
+          in: header
+          required: true
+          type: string
+          description: Bearer YOUR_JWT_HERE
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/TransactionHistoryItem'
+        '400':
+          description: A failed response
+          schema:
+            $ref: '#/definitions/Error'
+
+  /api/v1/balance:
+    get:
+      summary: Get wallet balance (in ETH and SDR)
+      tags:
+        - Private
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          type: string
+          description: Bearer YOUR_JWT_HERE
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/Balance'
+        '400':
+          description: A failed response
+          schema:
+            $ref: '#/definitions/Error'
+
+definitions:
+  Error:
+    type: object
+    properties:
+      error:
+        type: object
+        properties:
+          code:
+            type: integer
+            description: 401 - JWT is invalid or expired
+          message:
+            type:
+              string
+        required:
+          - message
+    required:
+      - error
+
+  NewWallet:
+    type: object
+    properties:
+      address:
+        type: string
+      generated_at:
+        type: integer
+        format: int64
+    required:
+      - address
+      - generated_at
+
+  Wallet:
+    type: object
+    properties:
+      id:
+        type: string
+      address:
+        type: string
+      generated_at:
+        type: integer
+        format: int64
+      created_at:
+        type: integer
+        format: int64
+      updated_at:
+        type: integer
+        format: int64
+    required:
+      - id
+      - address
+      - generated_at
+      - created_at
+
+  AuthorizedWallet:
+    type: object
+    properties:
+      result:
+        type: object
+        properties:
+          wallet:
+            $ref: '#/definitions/Wallet'
+          access_token:
+            type: string
+        required:
+          - wallet
+          - access_token
+    required:
+      - result
+
+  NewTransfer:
+    type: object
+    properties:
+      to_address:
+        type: string
+      amount:
+        type: number
+        format: double
+    required:
+      - to_address
+      - amount
+
+  TaxEstimation:
+    type: object
+    properties:
+      tax:
+        type: number
+        format: double
+    required:
+      - tax
+
+  UnsignedTransaction:
+    type: object
+    properties:
+      nonce:
+        type: string
+        format: hex
+      gas_price:
+        type: string
+        format: hex
+      gas_limit:
+        type: string
+        format: hex
+      to:
+        type: string
+        format: hex
+      value:
+        type: string
+        format: hex
+      chain_id:
+        type: string
+        format: bigint
+      data:
+        type: string
+        format: hex
+    required:
+      - nonce
+      - gas_price
+      - gas_limit
+      - to
+      - value
+      - chain_id
+      - data
+
+  UnsignedTransfer:
+    type: object
+    properties:
+      id:
+        type: string
+      transfer_type:
+        type: string
+        description: Either "transfer" or "tax"
+      tx_data:
+        $ref: '#/definitions/UnsignedTransaction'
+    required:
+      - id
+      - transfer_type
+      - tx_data
+
+  SignedTransaction:
+    type: object
+    properties:
+      id:
+        type: string
+        description: The value you received in the "/api/v1/transfer" response
+      raw_tx:
+        type: string
+        format: hex
+        description: Raw transaction that will be sent as is to "eth_sendRawTransaction"
+    required:
+      - id
+      - raw_tx
+
+  SignedTransfer:
+    type: object
+    properties:
+      transactions:
+        type: array
+        items:
+          $ref: '#/definitions/SignedTransaction'
+    required:
+      - transactions
+
+  QueuedTransaction:
+    type: object
+    properties:
+      id:
+        type: string
+      status:
+        type: string
+        description: Either "queued" or "sent"
+    required:
+      - id
+      - status
+
+  QueuedTransfer:
+    type: object
+    properties:
+      transactions:
+        type: array
+        items:
+          $ref: '#/definitions/QueuedTransaction'
+    required:
+      - transactions
+
+  TransactionHistoryItem:
+    type: object
+    properties:
+      tx_hash:
+        type: string
+        description: A transaction hash (or id in case of a queued transfer)
+      status:
+        type: string
+      amount:
+        type: number
+        format: double
+      from_address:
+        type: string
+      to_address:
+        type: string
+      time:
+        type: number
+        format: double
+        description: Unix timestamp
+      direction:
+        type: string
+        description: Either "in" or "out"
+      type:
+        type: string
+        description: Either "ethereum_tx" or "transfer_token"
+      eth_fee:
+        type: number
+        format: double
+        description: Transaction fee in ETH
+      sdr_fee:
+        type: number
+        format: double
+        description: Transaction fee in SDR
+    required:
+      - tx_hash
+      - status
+      - amount
+      - from_address
+      - to_address
+      - time
+      - direction
+      - type
+
+  TransactionHistory:
+    type: object
+    properties:
+      transactions:
+        type: array
+        items:
+          $ref: '#/definitions/TransactionHistoryItem'
+      meta:
+        type: object
+        properties:
+          total:
+            type: number
+            format: int64
+            description: Total transactions count
+        required:
+          - total
+    required:
+      - transactions
+      - meta
+
+  Balance:
+    type: object
+    properties:
+      sdr:
+        type: number
+        format: double
+    required:
+      - sdr
+
+  TransactionCompleted:
+    type: object
+    properties:
+      hash:
+        type: string
+        format: hex
+      type:
+        type: string
+        description: Either "ethereum_tx" or "transfer_token"
+      from:
+        type: string
+        format: hex
+      to:
+        type: string
+        format: hex
+      amount:
+        type: number
+        format: double
+    required:
+      - hash
+      - type
+      - from
+      - to
+      - amount

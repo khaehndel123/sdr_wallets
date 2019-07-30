@@ -1,0 +1,39 @@
+restAddr: :8000
+
+database:
+  host: localhost
+  port: 5432
+  user: sdr
+  password: secret
+  migrationsTable: wallet_schema_migrations
+
+ethereum:
+  nodeUrl: https://rinkeby.infura.io/v3/c7afba93cdd145468c81fbeac2cc2886
+  wsNodeUrl: wss://rinkeby.infura.io/ws/v3/c7afba93cdd145468c81fbeac2cc2886
+  tokenAddress: 0x01E8162f5a734A5AeD49DDe3726e8D6888308C66
+  bankAddress: 0x2aa83b8fb05cf2a9562c3d2e79b2f7d315690f86
+  bankPrivateKey: 71D9A4B1020CE9EEDFC31A02D9F846D2B1B52B16B7043AECE78834A13B02608A
+  packetSize: 25000
+
+log:
+  level: info
+  development: false
+  encoding: console
+  disableStacktrace: true
+  outputPaths:
+    - stdout
+  errorOutputPaths:
+    - stderr
+
+secrets:
+  api: a44P3NCdbAVMTGkSCxTY38tewD2V4hFr
+  token: ZmP3r5QsNgkyFsxTfK2WZfhNNQWmP3Np
+
+transaction:
+  surcharge: 1 # 100 percent from ETH fee
+  transferGas: 70000 # in case of using static gas fee
+  taxGas: 70000 # in case of using static gas fee
+
+sdrBackend:
+  basePath: http://database.sdr.io/api/v1
+  apiKey: 3257de9a-2430-4ee9-bbc1-0980045e671b
